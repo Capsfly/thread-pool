@@ -49,7 +49,7 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
         * `push_loop()`
         * `push_task()`
         * `submit()`
-        * `wait_for_tasks()`
+        * `wait_for_tasks_done()`
     * A separate test program `BS_thread_pool_light_test.cpp` tests only the features of the lightweight `BS::thread_pool_light` class. In the spirit of minimalism, it does not generate a log file and does not do any benchmarks.
     * To be perfectly clear, each header file is 100% stand-alone. If you wish to use the full package, you only need `BS_thread_pool.hpp`, and if you wish to use the light version, you only need `BS_thread_pool_light.hpp`. Only a single header file needs to be included in your project.
 
@@ -57,8 +57,8 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
 
 * `BS_thread_pool.hpp`:
     * Main `BS::thread_pool` class:
-        * Added a new member function, `push_loop()`, which does the same thing as `parallelize_loop()`, except that it does not return a `BS::multi_future` with the futures for each block. Just like `push_task()` vs. `submit()`, this avoids the overhead of creating the futures, but the user must use `wait_for_tasks()` or some other method to ensure that the loop finishes executing, otherwise bad things will happen.
-        * `push_task()` and `submit()` now utilize perfect forwarding in order to support more types of tasks - in particular member functions, which in previous versions could not be submitted unless wrapped in a lambda. To submit a member function, use the syntax `submit(&class::function, &object, args)`. More information can be found in `README.md`. See [#9](https://github.com/bshoshany/thread-pool/issues/9).
+        * Added a new member function, `push_loop()`, which does the same thing as `parallelize_loop()`, except that it does not return a `BS::multi_future` with the futures for each block. Just like `push_task()` vs. `submit()`, this avoids the overhead of creating the futures, but the user must use `wait_for_tasks_done()` or some other method to ensure that the loop finishes executing, otherwise bad things will happen.
+        * `push_task()` and `submit()` now utilize perfect forwarding in order to support more types of tasks_to_be_executed - in particular member functions, which in previous versions could not be submitted unless wrapped in a lambda. To submit a member function, use the syntax `submit(&class::function, &object, args)`. More information can be found in `README.md`. See [#9](https://github.com/bshoshany/thread-pool/issues/9).
         * `push_loop()` and `parallelize_loop()` now have overloads where the first argument (the first index in the loop) is omitted, in which case it is assumed to be 0. This is for convenience, as the case where the first index is 0 is very common.
     * Helper classes:
         * `BS::synced_stream` now utilizes perfect forwarding in the member functions `print()` and `println()`.
@@ -73,8 +73,8 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
         * Instead of generating random vectors using `std::mersenne_twister_engine`, which proved to be inconsistent across different compilers and systems, the test now generates each element via an arbitrarily-chosen numerical operation. In my testing, this provided much more consistent results.
         * Instead of using a hard-coded vector size, a suitable vector size is now determined dynamically at runtime.
         * Instead of using `parallelize_loop()`, the test now uses the new `push_loop()` function to squeeze out a bit more performance.
-        * Instead of setting the test parameters to achieve a fixed single-threaded mean execution time of 300 ms, the test now aims to achieve a fixed multi-threaded mean execution time of 50 ms when the number of blocks is equal to the number of threads. This allows for more reliable results on very fast CPUs with a very large number of threads, where the mean execution time when using all the threads could previously be below a statistically significant value.
-        * The number of vectors is now restricted to be a multiple of the number of threads, so that the blocks are always all of the same size.
+        * Instead of setting the test parameters to achieve a fixed single-threaded mean execution time of 300 ms, the test now aims to achieve a fixed multi-threaded mean execution time of 50 ms when the number of blocks is equal to the number of threads_ptr. This allows for more reliable results on very fast CPUs with a very large number of threads_ptr, where the mean execution time when using all the threads_ptr could previously be below a statistically significant value.
+        * The number of vectors is now restricted to be a multiple of the number of threads_ptr, so that the blocks are always all of the same size.
 * `README.md`:
     * Added instructions and examples for the new features described above.
     * Rewrote the documentation for `parallelize_loop()` to make it clearer.
@@ -82,12 +82,12 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
 ### v3.1.0 (2022-07-13)
 
 * `BS_thread_pool.hpp`:
-    * Fixed an issue where `wait_for_tasks()` would sometimes get stuck if `push_task()` was executed immediately before `wait_for_tasks()`.
-    * Both the thread pool constructor and the `reset()` member function now determine the number of threads to use in the pool as follows. If the parameter is a positive number, then the pool will be created with this number of threads. If the parameter is non-positive, or a parameter was not supplied, then the pool will be created with the total number of hardware threads available, as obtained from `std::thread::hardware_concurrency()`. If the latter returns a non-positive number for some reason, then the pool will be created with just one thread. See [#51](https://github.com/bshoshany/thread-pool/issues/51) and [#52](https://github.com/bshoshany/thread-pool/issues/52).
+    * Fixed an issue where `wait_for_tasks_done()` would sometimes get stuck if `push_task()` was executed immediately before `wait_for_tasks_done()`.
+    * Both the thread pool constructor and the `reset()` member function now determine the number of threads_ptr to use in the pool as follows. If the parameter is a positive number, then the pool will be created with this number of threads_ptr. If the parameter is non-positive, or a parameter was not supplied, then the pool will be created with the total number of hardware threads_ptr available, as obtained from `std::thread::hardware_concurrency()`. If the latter returns a non-positive number for some reason, then the pool will be created with just one thread. See [#51](https://github.com/bshoshany/thread-pool/issues/51) and [#52](https://github.com/bshoshany/thread-pool/issues/52).
     * Added the `[[nodiscard]]` attribute to classes and class members, in order to warn the user when accidentally discarding an important return value, such as a future or the return value of a function with no useful side-effects. For example, if you use `submit()` and don't save the future it returns, the compiler will now generate a warning. (If a future is not needed, then you should use `push_task()` instead.)
     * Removed the `explicit` specifier from all constructors, as it prevented the default constructor from being used with static class members. See [#48](https://github.com/bshoshany/thread-pool/issues/48>).
 * `BS_thread_pool_test.cpp`:
-    * Improved `count_unique_threads()` using condition variables, to ensure that each thread in the pool runs at least one task regardless of how fast it takes to run the tasks.
+    * Improved `count_unique_threads()` using condition variables, to ensure that each thread in the pool runs at least one task regardless of how fast it takes to run the tasks_to_be_executed.
     * When appropriate, `check()` now explicitly reports what the obtained result was and what it was expected to be.
     * `check_task_monitoring()` and `check_pausing()` now explicitly report the results of the monitoring at each step.
     * Changed all instances of `std::vector<std::atomic<bool>>` to `std::unique_ptr<std::atomic<bool>[]>`. See [#44](https://github.com/bshoshany/thread-pool/issues/44).
@@ -117,8 +117,8 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
     * The template specializations for `push_task()` have been merged. Now instead of two versions, one for functions with arguments and one for functions without arguments, there is just one version, which can accept any function.
     * Constructors have been made `explicit`. See [issue #28](https://github.com/bshoshany/thread-pool/issues/28).
     * `submit()` now uses `std::make_shared` instead of `new` to create the shared pointer. This means only one memory allocation is performed instead of two, which should improve performance. In addition, all unique pointers are now created using `std::make_unique`.
-    * A new helper class template, `BS::multi_future`, has been added. It's basically just a wrapper around `std::vector<std::future<T>>`. This class is used by the new implementation of `parallelize_loop()` to allow waiting for the entire loop, consisting of multiple tasks with their corresponding futures, to finish executing.
-    * `BS::multi_future` can also be used independently to handle multiple futures at once. For example, you can now keep track of several groups of tasks by storing their futures inside separate `BS::multi_future` objects and use either `wait()` to wait for all tasks in a specific group to finish or `get()` to get an `std::vector` with the return values of every task in the group.
+    * A new helper class template, `BS::multi_future`, has been added. It's basically just a wrapper around `std::vector<std::future<T>>`. This class is used by the new implementation of `parallelize_loop()` to allow waiting for the entire loop, consisting of multiple tasks_to_be_executed with their corresponding futures, to finish executing.
+    * `BS::multi_future` can also be used independently to handle multiple futures at once. For example, you can now keep track of several groups of tasks_to_be_executed by storing their futures inside separate `BS::multi_future` objects and use either `wait()` to wait for all tasks_to_be_executed in a specific group to finish or `get()` to get an `std::vector` with the return values of every task in the group.
     * Integer types are now chosen in a smarter way to improve portability, allow for better compatibility with 32-bit systems, and prevent potential conversion errors.
     * Added a new type, `BS::concurrency_t`, equal to the return type of `std::thread::hardware_concurrency()`. This is probably pointless, since the C++ standard requires this to be `unsigned int`, but it seems to me to make the code slightly more portable, in case some non-conforming compiler chooses to use a different integer type.
     * C-style casts have been converted to C++ cast expressions for added clarity.
@@ -131,7 +131,7 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
     * Improved some of the tests to make them more reliable. For example, `count_unique_threads()` now uses futures (stored in a `BS::multi_future<void>` object).
     * The program now uses `std::vector` instead of matrices, for both consistency checks and benchmarks, in order to simplify the code and considerably reduce its length.
     * The benchmarks have been simplified. There's now only one test: filling a specific number of vectors of fixed size with random values. This may be replaced with something more practical in a future released, but at least on the systems I've tested on, it does demonstrate a very significant multi-threading speedup.
-    * In addition to multi-threaded tests with different numbers of tasks, the benchmark now also includes a single-threaded test. This allows for more accurate benchmarks compared to previous versions, as the (slight) parallelization overhead is now taken into account when calculating the maximum speedup.
+    * In addition to multi-threaded tests with different numbers of tasks_to_be_executed, the benchmark now also includes a single-threaded test. This allows for more accurate benchmarks compared to previous versions, as the (slight) parallelization overhead is now taken into account when calculating the maximum speedup.
     * The program decides how many vectors to use for benchmarking by testing how many are needed to reach a target duration in the single-threaded test. This ensures that the test takes approximately the same amount of time on different systems, and is thus more consistent and portable.
     * Miscellaneous minor optimizations and style improvements.
 * Changes to `README.md`:
@@ -156,7 +156,7 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
 
 ### v1.9 (2021-07-29)
 
-* Fixed a bug in `reset()` which caused it to create the wrong number of threads.
+* Fixed a bug in `reset()` which caused it to create the wrong number of threads_ptr.
 
 ### v1.8 (2021-07-28)
 
@@ -168,7 +168,7 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
 
 ### v1.7 (2021-06-02)
 
-* Fixed a bug in `parallelize_loop()` which prevented it from actually running loops in parallel, see [this issue](https://github.com/bshoshany/thread-pool/issues/11).
+* Fixed a bug in `parallelize_loop()` which prevented it from actually is_running loops in parallel, see [this issue](https://github.com/bshoshany/thread-pool/issues/11).
 
 ### v1.6 (2021-05-26)
 
@@ -181,17 +181,17 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
 
 ### v1.4 (2021-05-05)
 
-* Added three new public member functions to monitor the tasks submitted to the pool:
-    * `get_tasks_queued()` gets the number of tasks currently waiting in the queue to be executed by the threads.
-    * `get_tasks_running()` gets the number of tasks currently being executed by the threads.
-    * `get_tasks_total()` gets the total number of unfinished tasks - either still in the queue, or running in a thread.
-    * Note that `get_tasks_running() == get_tasks_total() - get_tasks_queued()`.
-    * Renamed the private member variable `tasks_waiting` to `tasks_total` to make its purpose clearer.
+* Added three new public member functions to monitor the tasks_to_be_executed submitted to the pool:
+    * `get_tasks_queued_size()` gets the number of tasks_to_be_executed currently waiting in the queue to be executed by the threads_ptr.
+    * `get_tasks_running()` gets the number of tasks_to_be_executed currently being executed by the threads_ptr.
+    * `get_tasks_total()` gets the total number of unfinished tasks_to_be_executed - either still in the queue, or is_running in a thread.
+    * Note that `get_tasks_running() == get_tasks_total() - get_tasks_queued_size()`.
+    * Renamed the private member variable `tasks_waiting` to `tasks_total_not_completed` to make its purpose clearer.
 * Added an option to temporarily pause the workers:
-    * When public member variable `paused` is set to `true`, the workers temporarily stop popping new tasks out of the queue, although any tasks already executed will keep running until they are done. Set to `false` again to resume popping tasks.
-    * While the workers are paused, `wait_for_tasks()` will wait for the running tasks instead of all tasks (otherwise it would wait forever).
-    * By utilizing the new pausing mechanism, `reset()` can now change the number of threads on-the-fly while there are still tasks waiting in the queue. The new thread pool will resume executing tasks from the queue once it is created.
-* `parallelize_loop()` and `wait_for_tasks()` now have the same behavior as the worker function with regards to waiting for tasks to complete. If the relevant tasks are not yet complete, then before checking again, they will sleep for `sleep_duration` microseconds, unless that variable is set to zero, in which case they will call `std::this_thread::yield()`. This should improve performance and reduce CPU usage.
+    * When public member variable `paused` is set to `true`, the workers temporarily stop popping new tasks_to_be_executed out of the queue, although any tasks_to_be_executed already executed will keep is_running until they are done. Set to `false` again to resume popping tasks_to_be_executed.
+    * While the workers are paused, `wait_for_tasks_done()` will wait for the is_running tasks_to_be_executed instead of all tasks_to_be_executed (otherwise it would wait forever).
+    * By utilizing the new pausing mechanism, `reset()` can now change the number of threads_ptr on-the-fly while there are still tasks_to_be_executed waiting in the queue. The new thread pool will resume executing tasks_to_be_executed from the queue once it is created.
+* `parallelize_loop()` and `wait_for_tasks_done()` now have the same behavior as the worker function with regards to waiting for tasks_to_be_executed to complete. If the relevant tasks_to_be_executed are not yet complete, then before checking again, they will sleep for `sleep_duration` microseconds, unless that variable is set to zero, in which case they will call `std::this_thread::yield()`. This should improve performance and reduce CPU usage.
 * Merged [this commit](https://github.com/bshoshany/thread-pool/pull/8): Fixed weird error when using MSVC and including `windows.h`.
 * The `README.md` file has been reorganized and expanded.
 
@@ -200,12 +200,12 @@ GitHub: [https://github.com/bshoshany](https://github.com/bshoshany)<br />
 * Fixed [this issue](https://github.com/bshoshany/thread-pool/issues/3): Removed `std::move` from the `return` statement in `push_task()`. This previously generated a `-Wpessimizing-move` warning in Clang. The assembly code generated by the compiler seems to be the same before and after this change, presumably because the compiler eliminates the `std::move` automatically, but this change gets rid of the Clang warning.
 * Fixed [this issue](https://github.com/bshoshany/thread-pool/issues/5): Removed a debugging message printed to `std::cout`, which was left in the code by mistake.
 * Fixed [this issue](https://github.com/bshoshany/thread-pool/issues/6): `parallelize_loop()` no longer sends references for the variables `start` and `stop` when calling `push_task()`, which may lead to undefined behavior.
-* A companion paper is now published at <a href="https://arxiv.org/abs/2105.00613">arXiv:2105.00613</a>, including additional information such as performance tests on systems with up to 80 hardware threads. The `README.md` has been updated, and it is now roughly identical in content to the paper.
+* A companion paper is now published at <a href="https://arxiv.org/abs/2105.00613">arXiv:2105.00613</a>, including additional information such as performance tests on systems with up to 80 hardware threads_ptr. The `README.md` has been updated, and it is now roughly identical in content to the paper.
 
 ### v1.2 (2021-04-29)
 
-* The worker function, which controls the execution of tasks by each thread, now sleeps by default instead of yielding. Previously, when the worker could not find any tasks in the queue, it called `std::this_thread::yield()` and then tried again. However, this caused the workers to have high CPU usage when idle, [as reported by some users](https://github.com/bshoshany/thread-pool/issues/1). Now, when the worker function cannot find a task to run, it instead sleeps for a duration given by the public member variable `sleep_duration` (in microseconds) before checking the queue again. The default value is `1000` microseconds, which I found to be optimal in terms of both CPU usage and performance, but your own optimal value may be different.
-* If the constructor is called with an argument of zero for the number of threads, then the default value, `std::thread::hardware_concurrency()`, is used instead.
+* The worker function, which controls the execution of tasks_to_be_executed by each thread, now sleeps by default instead of yielding. Previously, when the worker could not find any tasks_to_be_executed in the queue, it called `std::this_thread::yield()` and then tried again. However, this caused the workers to have high CPU usage when idle, [as reported by some users](https://github.com/bshoshany/thread-pool/issues/1). Now, when the worker function cannot find a task to run, it instead sleeps for a duration given by the public member variable `sleep_duration` (in microseconds) before checking the queue again. The default value is `1000` microseconds, which I found to be optimal in terms of both CPU usage and performance, but your own optimal value may be different.
+* If the constructor is called with an argument of zero for the number of threads_ptr, then the default value, `std::thread::hardware_concurrency()`, is used instead.
 * Added a simple helper class, `timer`, which can be used to measure execution time for benchmarking purposes.
 * Improved and expanded the documentation.
 

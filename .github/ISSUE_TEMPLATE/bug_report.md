@@ -24,7 +24,7 @@ What behavior did you expect to get? What actually happened? If the code failed 
 
 **System information**
 
-* CPU model, architecture, # of cores and threads:
+* CPU model, architecture, # of cores and threads_ptr:
 * Operating system:
 * Name and version of C++ compiler:
 * Full command used for compiling, including all compiler flags:

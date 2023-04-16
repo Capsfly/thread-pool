@@ -49,9 +49,9 @@ public:
     /**
      * @brief Construct a multi_future object with the given number of futures.
      *
-     * @param num_futures_ The desired number of futures to store.
+     * @param desired_num_futures_ The desired number of futures to store.
      */
-    multi_future(const size_t num_futures_ = 0) : futures(num_futures_) {}
+    multi_future(const size_t desired_num_futures_ = 0) : futures(desired_num_futures_) {}
 
     /**
      * @brief Get the results from all the futures stored in this multi_future object, rethrowing any stored exceptions.
@@ -155,7 +155,8 @@ public:
         if (per_block_size == 0)
         {
             per_block_size = 1;
-            blocks_num = (indices_total_size > 1) ? indices_total_size : 1;
+            blocks_num = (indices_total_size > 1) ? indices_total_size : 1;//可能有问题这里，
+            // 如果per_block_size != 0，那么blocks_num就不会被初始化
         }
     }
 
@@ -186,7 +187,7 @@ public:
      *
      * @return The number of blocks.
      */
-    [[nodiscard]] size_t get_num_blocks() const
+    [[nodiscard]] size_t get_blocks_num() const
     {
         return blocks_num;
     }
@@ -247,19 +248,19 @@ public:
     /**
      * @brief Construct a new thread pool.
      *
-     * @param thread_count_ The number of threads to use. The default value is the total number of hardware threads available, as reported by the implementation. This is usually determined by the number of cores in the CPU. If a core is hyperthreaded, it will count as two threads.
+     * @param desired_thread_count_ The number of threads_ptr to use. The default value is the total number of hardware threads_ptr available, as reported by the implementation. This is usually determined by the number of cores in the CPU. If a core is hyperthreaded, it will count as two threads_ptr.
      */
-    thread_pool(const concurrency_t thread_count_ = 0) : thread_count(determine_thread_count(thread_count_)), threads(std::make_unique<std::thread[]>(determine_thread_count(thread_count_)))
+    thread_pool(const concurrency_t desired_thread_count_ = 0) : thread_count(determine_thread_count(desired_thread_count_)), threads_ptr(std::make_unique<std::thread[]>(determine_thread_count(desired_thread_count_)))
     {
         create_threads();
     }
 
     /**
-     * @brief Destruct the thread pool. Waits for all tasks to complete, then destroys all threads. Note that if the pool is paused, then any tasks still in the queue will never be executed.
+     * @brief Destruct the thread pool. Waits for all tasks_to_be_executed to complete, then destroys all threads_ptr. Note that if the pool is paused, then any tasks_to_be_executed still in the queue will never be executed.
      */
     ~thread_pool()
     {
-        wait_for_tasks();
+        wait_for_tasks_done();
         destroy_threads();
     }
 
@@ -268,41 +269,41 @@ public:
     // =======================
 
     /**
-     * @brief Get the number of tasks currently waiting in the queue to be executed by the threads.
+     * @brief Get the number of tasks_to_be_executed currently waiting in the queue to be executed by the threads_ptr.
      *
-     * @return The number of queued tasks.
+     * @return The number of queued tasks_to_be_executed.
      */
-    [[nodiscard]] size_t get_tasks_queued() const
+    [[nodiscard]] size_t get_tasks_queued_size() const
     {
         const std::scoped_lock tasks_lock(tasks_mutex);
-        return tasks.size();
+        return tasks_to_be_executed.size();
     }
 
     /**
-     * @brief Get the number of tasks currently being executed by the threads.
+     * @brief Get the number of tasks_to_be_executed currently being executed by the threads_ptr.
      *
-     * @return The number of running tasks.
+     * @return The number of is_running tasks_to_be_executed.
      */
     [[nodiscard]] size_t get_tasks_running() const
     {
         const std::scoped_lock tasks_lock(tasks_mutex);
-        return tasks_total - tasks.size();
+        return tasks_total_not_completed - tasks_to_be_executed.size();
     }
 
     /**
-     * @brief Get the total number of unfinished tasks: either still in the queue, or running in a thread. Note that get_tasks_total() == get_tasks_queued() + get_tasks_running().
+     * @brief Get the total number of unfinished tasks_to_be_executed: either still in the queue, or is_running in a thread. Note that get_tasks_total() == get_tasks_queued_size() + get_tasks_running().
      *
-     * @return The total number of tasks.
+     * @return The total number of tasks_to_be_executed.
      */
     [[nodiscard]] size_t get_tasks_total() const
     {
-        return tasks_total;
+        return tasks_total_not_completed;
     }
 
     /**
-     * @brief Get the number of threads in the pool.
+     * @brief Get the number of threads_ptr in the pool.
      *
-     * @return The number of threads.
+     * @return The number of threads_ptr.
      */
     [[nodiscard]] concurrency_t get_thread_count() const
     {
@@ -320,28 +321,28 @@ public:
     }
 
     /**
-     * @brief Parallelize a loop by automatically splitting it into blocks and submitting each block separately to the queue. Returns a multi_future object that contains the futures for all of the blocks.
+     * @brief Parallelize a func by automatically splitting it into blocks and submitting each block separately to the queue. Returns a multi_future object that contains the futures for all of the blocks.
      *
-     * @tparam F The type of the function to loop through.
-     * @tparam T1 The type of the first index in the loop. Should be a signed or unsigned integer.
-     * @tparam T2 The type of the index after the last index in the loop. Should be a signed or unsigned integer. If T1 is not the same as T2, a common type will be automatically inferred.
+     * @tparam F The type of the function to func through.
+     * @tparam T1 The type of the first index in the func. Should be a signed or unsigned integer.
+     * @tparam T2 The type of the index after the last index in the func. Should be a signed or unsigned integer. If T1 is not the same as T2, a common type will be automatically inferred.
      * @tparam T The common type of T1 and T2.
-     * @tparam R The return value of the loop function F (can be void).
-     * @param first_index The first index in the loop.
-     * @param index_after_last The index after the last index in the loop. The loop will iterate from first_index to (index_after_last - 1) inclusive. In other words, it will be equivalent to "for (T i = first_index; i < index_after_last; ++i)". Note that if index_after_last == first_index, no blocks will be submitted.
-     * @param loop The function to loop through. Will be called once per block. Should take exactly two arguments: the first index in the block and the index after the last index in the block. loop(start, end) should typically involve a loop of the form "for (T i = start; i < end; ++i)".
-     * @param num_blocks The maximum number of blocks to split the loop into. The default is to use the number of threads in the pool.
-     * @return A multi_future object that can be used to wait for all the blocks to finish. If the loop function returns a value, the multi_future object can also be used to obtain the values returned by each block.
+     * @tparam R The return value of the func function F (can be void).
+     * @param first_index The first index in the func.
+     * @param index_after_last The index after the last index in the func. The func will iterate from first_index to (index_after_last - 1) inclusive. In other words, it will be equivalent to "for (T i = first_index; i < index_after_last; ++i)". Note that if index_after_last == first_index, no blocks will be submitted.
+     * @param func The function to func through. Will be called once per block. Should take exactly two arguments: the first index in the block and the index after the last index in the block. func(start, end) should typically involve a func of the form "for (T i = start; i < end; ++i)".
+     * @param num_blocks The maximum number of blocks to split the func into. The default is to use the number of threads_ptr in the pool.
+     * @return A multi_future object that can be used to wait for all the blocks to finish. If the func function returns a value, the multi_future object can also be used to obtain the values returned by each block.
      */
     template <typename F, typename T1, typename T2, typename T = std::common_type_t<T1, T2>, typename R = std::invoke_result_t<std::decay_t<F>, T, T>>
-    [[nodiscard]] multi_future<R> parallelize_loop(const T1 first_index, const T2 index_after_last, F&& loop, const size_t num_blocks = 0)
+    [[nodiscard]] multi_future<R> parallelize_loop(const T1 first_index, const T2 index_after_last, F&& func, const size_t num_blocks = 0)
     {
         blocks blks(first_index, index_after_last, num_blocks ? num_blocks : thread_count);
         if (blks.get_total_size() > 0)
         {
-            multi_future<R> mf(blks.get_num_blocks());
-            for (size_t i = 0; i < blks.get_num_blocks(); ++i)
-                mf[i] = submit(std::forward<F>(loop), blks.start(i), blks.end(i));
+            multi_future<R> mf(blks.get_blocks_num());
+            for (size_t i = 0; i < blks.get_blocks_num(); ++i)
+                mf[i] = submit(std::forward<F>(func), blks.start(i), blks.end(i));
             return mf;
         }
         else
@@ -351,24 +352,24 @@ public:
     }
 
     /**
-     * @brief Parallelize a loop by automatically splitting it into blocks and submitting each block separately to the queue. Returns a multi_future object that contains the futures for all of the blocks. This overload is used for the special case where the first index is 0.
+     * @brief Parallelize a func by automatically splitting it into blocks and submitting each block separately to the queue. Returns a multi_future object that contains the futures for all of the blocks. This overload is used for the special case where the first index is 0.
      *
-     * @tparam F The type of the function to loop through.
-     * @tparam T The type of the loop indices. Should be a signed or unsigned integer.
-     * @tparam R The return value of the loop function F (can be void).
-     * @param index_after_last The index after the last index in the loop. The loop will iterate from 0 to (index_after_last - 1) inclusive. In other words, it will be equivalent to "for (T i = 0; i < index_after_last; ++i)". Note that if index_after_last == 0, no blocks will be submitted.
-     * @param loop The function to loop through. Will be called once per block. Should take exactly two arguments: the first index in the block and the index after the last index in the block. loop(start, end) should typically involve a loop of the form "for (T i = start; i < end; ++i)".
-     * @param num_blocks The maximum number of blocks to split the loop into. The default is to use the number of threads in the pool.
-     * @return A multi_future object that can be used to wait for all the blocks to finish. If the loop function returns a value, the multi_future object can also be used to obtain the values returned by each block.
+     * @tparam F The type of the function to func through.
+     * @tparam T The type of the func indices. Should be a signed or unsigned integer.
+     * @tparam R The return value of the func function F (can be void).
+     * @param index_after_last The index after the last index in the func. The func will iterate from 0 to (index_after_last - 1) inclusive. In other words, it will be equivalent to "for (T i = 0; i < index_after_last; ++i)". Note that if index_after_last == 0, no blocks will be submitted.
+     * @param func The function to func through. Will be called once per block. Should take exactly two arguments: the first index in the block and the index after the last index in the block. func(start, end) should typically involve a func of the form "for (T i = start; i < end; ++i)".
+     * @param num_blocks The maximum number of blocks to split the func into. The default is to use the number of threads_ptr in the pool.
+     * @return A multi_future object that can be used to wait for all the blocks to finish. If the func function returns a value, the multi_future object can also be used to obtain the values returned by each block.
      */
     template <typename F, typename T, typename R = std::invoke_result_t<std::decay_t<F>, T, T>>
-    [[nodiscard]] multi_future<R> parallelize_loop(const T index_after_last, F&& loop, const size_t num_blocks = 0)
+    [[nodiscard]] multi_future<R> parallelize_loop(const T index_after_last, F&& func, const size_t num_blocks = 0)
     {
-        return parallelize_loop(0, index_after_last, std::forward<F>(loop), num_blocks);
+        return parallelize_loop(0, index_after_last, std::forward<F>(func), num_blocks);
     }
 
     /**
-     * @brief Pause the pool. The workers will temporarily stop retrieving new tasks out of the queue, although any tasks already executed will keep running until they are finished.
+     * @brief Pause the pool. The workers will temporarily stop retrieving new tasks_to_be_executed out of the queue, although any tasks_to_be_executed already executed will keep is_running until they are finished.
      */
     void pause()
     {
@@ -376,7 +377,7 @@ public:
     }
 
     /**
-     * @brief Parallelize a loop by automatically splitting it into blocks and submitting each block separately to the queue. Does not return a multi_future, so the user must use wait_for_tasks() or some other method to ensure that the loop finishes executing, otherwise bad things will happen.
+     * @brief Parallelize a loop by automatically splitting it into blocks and submitting each block separately to the queue. Does not return a multi_future, so the user must use wait_for_tasks_done() or some other method to ensure that the loop finishes executing, otherwise bad things will happen.
      *
      * @tparam F The type of the function to loop through.
      * @tparam T1 The type of the first index in the loop. Should be a signed or unsigned integer.
@@ -385,7 +386,7 @@ public:
      * @param first_index The first index in the loop.
      * @param index_after_last The index after the last index in the loop. The loop will iterate from first_index to (index_after_last - 1) inclusive. In other words, it will be equivalent to "for (T i = first_index; i < index_after_last; ++i)". Note that if index_after_last == first_index, no blocks will be submitted.
      * @param loop The function to loop through. Will be called once per block. Should take exactly two arguments: the first index in the block and the index after the last index in the block. loop(start, end) should typically involve a loop of the form "for (T i = start; i < end; ++i)".
-     * @param num_blocks The maximum number of blocks to split the loop into. The default is to use the number of threads in the pool.
+     * @param num_blocks The maximum number of blocks to split the loop into. The default is to use the number of threads_ptr in the pool.
      */
     template <typename F, typename T1, typename T2, typename T = std::common_type_t<T1, T2>>
     void push_loop(const T1 first_index, const T2 index_after_last, F&& loop, const size_t num_blocks = 0)
@@ -393,19 +394,19 @@ public:
         blocks blks(first_index, index_after_last, num_blocks ? num_blocks : thread_count);
         if (blks.get_total_size() > 0)
         {
-            for (size_t i = 0; i < blks.get_num_blocks(); ++i)
+            for (size_t i = 0; i < blks.get_blocks_num(); ++i)
                 push_task(std::forward<F>(loop), blks.start(i), blks.end(i));
         }
     }
 
     /**
-     * @brief Parallelize a loop by automatically splitting it into blocks and submitting each block separately to the queue. Does not return a multi_future, so the user must use wait_for_tasks() or some other method to ensure that the loop finishes executing, otherwise bad things will happen. This overload is used for the special case where the first index is 0.
+     * @brief Parallelize a loop by automatically splitting it into blocks and submitting each block separately to the queue. Does not return a multi_future, so the user must use wait_for_tasks_done() or some other method to ensure that the loop finishes executing, otherwise bad things will happen. This overload is used for the special case where the first index is 0.
      *
      * @tparam F The type of the function to loop through.
      * @tparam T The type of the loop indices. Should be a signed or unsigned integer.
      * @param index_after_last The index after the last index in the loop. The loop will iterate from 0 to (index_after_last - 1) inclusive. In other words, it will be equivalent to "for (T i = 0; i < index_after_last; ++i)". Note that if index_after_last == 0, no blocks will be submitted.
      * @param loop The function to loop through. Will be called once per block. Should take exactly two arguments: the first index in the block and the index after the last index in the block. loop(start, end) should typically involve a loop of the form "for (T i = start; i < end; ++i)".
-     * @param num_blocks The maximum number of blocks to split the loop into. The default is to use the number of threads in the pool.
+     * @param num_blocks The maximum number of blocks to split the loop into. The default is to use the number of threads_ptr in the pool.
      */
     template <typename F, typename T>
     void push_loop(const T index_after_last, F&& loop, const size_t num_blocks = 0)
@@ -414,7 +415,7 @@ public:
     }
 
     /**
-     * @brief Push a function with zero or more arguments, but no return value, into the task queue. Does not return a future, so the user must use wait_for_tasks() or some other method to ensure that the task finishes executing, otherwise bad things will happen.
+     * @brief Push a function with zero or more arguments, but no return value, into the task queue. Does not return a future, so the user must use wait_for_tasks_done() or some other method to ensure that the task finishes executing, otherwise bad things will happen.
      *
      * @tparam F The type of the function.
      * @tparam A The types of the arguments.
@@ -427,43 +428,43 @@ public:
         std::function<void()> task_function = std::bind(std::forward<F>(task), std::forward<A>(args)...);
         {
             const std::scoped_lock tasks_lock(tasks_mutex);
-            tasks.push(task_function);
+            tasks_to_be_executed.push(task_function);
         }
-        ++tasks_total;
+        ++tasks_total_not_completed;
         task_available_cv.notify_one();
     }
 
     /**
-     * @brief Reset the number of threads in the pool. Waits for all currently running tasks to be completed, then destroys all threads in the pool and creates a new thread pool with the new number of threads. Any tasks that were waiting in the queue before the pool was reset will then be executed by the new threads. If the pool was paused before resetting it, the new pool will be paused as well.
+     * @brief Reset the number of threads_ptr in the pool. Waits for all currently is_running tasks_to_be_executed to be completed, then destroys all threads_ptr in the pool and creates a new thread pool with the new number of threads_ptr. Any tasks_to_be_executed that were waiting in the queue before the pool was reset will then be executed by the new threads_ptr. If the pool was paused before resetting it, the new pool will be paused as well.
      *
-     * @param thread_count_ The number of threads to use. The default value is the total number of hardware threads available, as reported by the implementation. This is usually determined by the number of cores in the CPU. If a core is hyperthreaded, it will count as two threads.
+     * @param thread_count_ The number of threads_ptr to use. The default value is the total number of hardware threads_ptr available, as reported by the implementation. This is usually determined by the number of cores in the CPU. If a core is hyperthreaded, it will count as two threads_ptr.
      */
     void reset(const concurrency_t thread_count_ = 0)
     {
         const bool was_paused = paused;
         paused = true;
-        wait_for_tasks();
+        wait_for_tasks_done();
         destroy_threads();
         thread_count = determine_thread_count(thread_count_);
-        threads = std::make_unique<std::thread[]>(thread_count);
+        threads_ptr = std::make_unique<std::thread[]>(thread_count);
         paused = was_paused;
         create_threads();
     }
 
     /**
-     * @brief Submit a function with zero or more arguments into the task queue. If the function has a return value, get a future for the eventual returned value. If the function has no return value, get an std::future<void> which can be used to wait until the task finishes.
+     * @brief Submit a function with zero or more arguments into the func queue. If the function has a return value, get a future for the eventual returned value. If the function has no return value, get an std::future<void> which can be used to wait until the func finishes.
      *
      * @tparam F The type of the function.
      * @tparam A The types of the zero or more arguments to pass to the function.
      * @tparam R The return type of the function (can be void).
-     * @param task The function to submit.
-     * @param args The zero or more arguments to pass to the function. Note that if the task is a class member function, the first argument must be a pointer to the object, i.e. &object (or this), followed by the actual arguments.
+     * @param func The function to submit.
+     * @param args The zero or more arguments to pass to the function. Note that if the func is a class member function, the first argument must be a pointer to the object, i.e. &object (or this), followed by the actual arguments.
      * @return A future to be used later to wait for the function to finish executing and/or obtain its returned value if it has one.
      */
     template <typename F, typename... A, typename R = std::invoke_result_t<std::decay_t<F>, std::decay_t<A>...>>
-    [[nodiscard]] std::future<R> submit(F&& task, A&&... args)
+    [[nodiscard]] std::future<R> submit(F&& func, A&&... args)
     {
-        std::function<R()> task_function = std::bind(std::forward<F>(task), std::forward<A>(args)...);
+        std::function<R()> task_function = std::bind(std::forward<F>(func), std::forward<A>(args)...);
         std::shared_ptr<std::promise<R>> task_promise = std::make_shared<std::promise<R>>();
         push_task(
             [task_function, task_promise]
@@ -495,7 +496,7 @@ public:
     }
 
     /**
-     * @brief Unpause the pool. The workers will resume retrieving new tasks out of the queue.
+     * @brief Unpause the pool. The workers will resume retrieving new tasks_to_be_executed out of the queue.
      */
     void unpause()
     {
@@ -503,13 +504,13 @@ public:
     }
 
     /**
-     * @brief Wait for tasks to be completed. Normally, this function waits for all tasks, both those that are currently running in the threads and those that are still waiting in the queue. However, if the pool is paused, this function only waits for the currently running tasks (otherwise it would wait forever). Note: To wait for just one specific task, use submit() instead, and call the wait() member function of the generated future.
+     * @brief Wait for tasks_to_be_executed to be completed. Normally, this function waits for all tasks_to_be_executed, both those that are currently is_running in the threads_ptr and those that are still waiting in the queue. However, if the pool is paused, this function only waits for the currently is_running tasks_to_be_executed (otherwise it would wait forever). Note: To wait for just one specific task, use submit() instead, and call the wait() member function of the generated future.
      */
-    void wait_for_tasks()
+    void wait_for_tasks_done()
     {
         waiting = true;
         std::unique_lock<std::mutex> tasks_lock(tasks_mutex);
-        task_done_cv.wait(tasks_lock, [this] { return (tasks_total == (paused ? tasks.size() : 0)); });
+        task_done_cv.wait(tasks_lock, [this] { return (tasks_total_not_completed == (paused ? tasks_to_be_executed.size() : 0)); });
         waiting = false;
     }
 
@@ -519,35 +520,35 @@ private:
     // ========================
 
     /**
-     * @brief Create the threads in the pool and assign a worker to each thread.
+     * @brief Create the threads_ptr in the pool and assign a worker to each thread.
      */
     void create_threads()
     {
-        running = true;
+        is_running = true;
         for (concurrency_t i = 0; i < thread_count; ++i)
         {
-            threads[i] = std::thread(&thread_pool::worker, this);
+            threads_ptr[i] = std::thread(&thread_pool::worker, this);
         }
     }
 
     /**
-     * @brief Destroy the threads in the pool.
+     * @brief Destroy the threads_ptr in the pool.
      */
     void destroy_threads()
     {
-        running = false;
+        is_running = false;
         task_available_cv.notify_all();
         for (concurrency_t i = 0; i < thread_count; ++i)
         {
-            threads[i].join();
+            threads_ptr[i].join();
         }
     }
 
     /**
-     * @brief Determine how many threads the pool should have, based on the parameter passed to the constructor or reset().
+     * @brief Determine how many threads_ptr the pool should have, based on the parameter passed to the constructor or reset().
      *
-     * @param thread_count_ The parameter passed to the constructor or reset(). If the parameter is a positive number, then the pool will be created with this number of threads. If the parameter is non-positive, or a parameter was not supplied (in which case it will have the default value of 0), then the pool will be created with the total number of hardware threads available, as obtained from std::thread::hardware_concurrency(). If the latter returns a non-positive number for some reason, then the pool will be created with just one thread.
-     * @return The number of threads to use for constructing the pool.
+     * @param thread_count_ The parameter passed to the constructor or reset(). If the parameter is a positive number, then the pool will be created with this number of threads_ptr. If the parameter is non-positive, or a parameter was not supplied (in which case it will have the default value of 0), then the pool will be created with the total number of hardware threads_ptr available, as obtained from std::thread::hardware_concurrency(). If the latter returns a non-positive number for some reason, then the pool will be created with just one thread.
+     * @return The number of threads_ptr to use for constructing the pool.
      */
     [[nodiscard]] concurrency_t determine_thread_count(const concurrency_t thread_count_)
     {
@@ -563,23 +564,23 @@ private:
     }
 
     /**
-     * @brief A worker function to be assigned to each thread in the pool. Waits until it is notified by push_task() that a task is available, and then retrieves the task from the queue and executes it. Once the task finishes, the worker notifies wait_for_tasks() in case it is waiting.
+     * @brief A worker function to be assigned to each thread in the pool. Waits until it is notified by push_task() that a task is available, and then retrieves the task from the queue and executes it. Once the task finishes, the worker notifies wait_for_tasks_done() in case it is waiting.
      */
     void worker()
     {
-        while (running)
+        while (is_running)
         {
             std::function<void()> task;
             std::unique_lock<std::mutex> tasks_lock(tasks_mutex);
-            task_available_cv.wait(tasks_lock, [this] { return !tasks.empty() || !running; });
-            if (running && !paused)
+            task_available_cv.wait(tasks_lock, [this] { return !tasks_to_be_executed.empty() || !is_running; });
+            if (is_running && !paused)
             {
-                task = std::move(tasks.front());
-                tasks.pop();
+                task = std::move(tasks_to_be_executed.front());
+                tasks_to_be_executed.pop();
                 tasks_lock.unlock();
                 task();
                 tasks_lock.lock();
-                --tasks_total;
+                --tasks_total_not_completed;
                 if (waiting)
                     task_done_cv.notify_one();
             }
@@ -591,14 +592,14 @@ private:
     // ============
 
     /**
-     * @brief An atomic variable indicating whether the workers should pause. When set to true, the workers temporarily stop retrieving new tasks out of the queue, although any tasks already executed will keep running until they are finished. When set to false again, the workers resume retrieving tasks.
+     * @brief An atomic variable indicating whether the workers should pause. When set to true, the workers temporarily stop retrieving new tasks_to_be_executed out of the queue, although any tasks_to_be_executed already executed will keep is_running until they are finished. When set to false again, the workers resume retrieving tasks_to_be_executed.
      */
     std::atomic<bool> paused = false;
 
     /**
-     * @brief An atomic variable indicating to the workers to keep running. When set to false, the workers permanently stop working.
+     * @brief An atomic variable indicating to the workers to keep is_running. When set to false, the workers permanently stop working.
      */
-    std::atomic<bool> running = false;
+    std::atomic<bool> is_running = false;
 
     /**
      * @brief A condition variable used to notify worker() that a new task has become available.
@@ -606,37 +607,37 @@ private:
     std::condition_variable task_available_cv = {};
 
     /**
-     * @brief A condition variable used to notify wait_for_tasks() that a tasks is done.
+     * @brief A condition variable used to notify wait_for_tasks_done() that a tasks_to_be_executed is done.
      */
     std::condition_variable task_done_cv = {};
 
     /**
-     * @brief A queue of tasks to be executed by the threads.
+     * @brief A queue of tasks_to_be_executed to be executed by the threads_ptr.
      */
-    std::queue<std::function<void()>> tasks = {};
+    std::queue<std::function<void()>> tasks_to_be_executed = {};
 
     /**
-     * @brief An atomic variable to keep track of the total number of unfinished tasks - either still in the queue, or running in a thread.
+     * @brief An atomic variable to keep track of the total number of unfinished tasks_to_be_executed - either still in the queue, or is_running in a thread.
      */
-    std::atomic<size_t> tasks_total = 0;
+    std::atomic<size_t> tasks_total_not_completed = 0;
 
     /**
-     * @brief A mutex to synchronize access to the task queue by different threads.
+     * @brief A mutex to synchronize access to the task queue by different threads_ptr.
      */
     mutable std::mutex tasks_mutex = {};
 
     /**
-     * @brief The number of threads in the pool.
+     * @brief The number of threads_ptr in the pool.
      */
     concurrency_t thread_count = 0;
 
     /**
-     * @brief A smart pointer to manage the memory allocated for the threads.
+     * @brief A smart pointer to manage the memory allocated for the threads_ptr.
      */
-    std::unique_ptr<std::thread[]> threads = nullptr;
+    std::unique_ptr<std::thread[]> threads_ptr = nullptr;
 
     /**
-     * @brief An atomic variable indicating that wait_for_tasks() is active and expects to be notified whenever a task is done.
+     * @brief An atomic variable indicating that wait_for_tasks_done() is active and expects to be notified whenever a task is done.
      */
     std::atomic<bool> waiting = false;
 };
@@ -648,7 +649,7 @@ private:
 //                                   Begin class synced_stream                                   //
 
 /**
- * @brief A helper class to synchronize printing to an output stream by different threads.
+ * @brief A helper class to synchronize printing to an output stream by different threads_ptr.
  */
 class [[nodiscard]] synced_stream
 {
@@ -661,7 +662,7 @@ public:
     synced_stream(std::ostream& out_stream_ = std::cout) : out_stream(out_stream_) {}
 
     /**
-     * @brief Print any number of items into the output stream. Ensures that no other threads print to this stream simultaneously, as long as they all exclusively use the same synced_stream object to print.
+     * @brief Print any number of items into the output stream. Ensures that no other threads_ptr print to this stream simultaneously, as long as they all exclusively use the same synced_stream object to print.
      *
      * @tparam T The types of the items
      * @param items The items to print.
@@ -674,7 +675,7 @@ public:
     }
 
     /**
-     * @brief Print any number of items into the output stream, followed by a newline character. Ensures that no other threads print to this stream simultaneously, as long as they all exclusively use the same synced_stream object to print.
+     * @brief Print any number of items into the output stream, followed by a newline character. Ensures that no other threads_ptr print to this stream simultaneously, as long as they all exclusively use the same synced_stream object to print.
      *
      * @tparam T The types of the items
      * @param items The items to print.

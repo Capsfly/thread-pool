@@ -10,7 +10,7 @@ What does your pull request fix or add to the library?
 
 Have you tested the new code using the provided automated test program and/or performed any other tests to ensure that it works correctly? If so, please provide information about the test system(s):
 
-* CPU model, architecture, # of cores and threads:
+* CPU model, architecture, # of cores and threads_ptr:
 * Operating system:
 * Name and version of C++ compiler:
 * Full command used for compiling, including all compiler flags:

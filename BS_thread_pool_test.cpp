@@ -164,11 +164,11 @@ void check(const T1 expected, const T2 obtained)
 }
 
 // =========================================
-// Functions to verify the number of threads
+// Functions to verify the number of threads_ptr
 // =========================================
 
 /**
- * @brief Count the number of unique threads in the pool. Submits a number of tasks equal to twice the thread count into the pool. Each task stores the ID of the thread running it, and then waits until released by the main thread. This ensures that each thread in the pool runs at least one task. The number of unique thread IDs is then counted from the stored IDs.
+ * @brief Count the number of unique threads_ptr in the pool. Submits a number of tasks_to_be_executed equal to twice the thread count into the pool. Each task stores the ID of the thread is_running it, and then waits until released by the main thread. This ensures that each thread in the pool runs at least one task. The number of unique thread IDs is then counted from the stored IDs.
  */
 std::condition_variable ID_cv, total_cv;
 std::mutex ID_mutex, total_mutex;
@@ -179,7 +179,7 @@ BS::concurrency_t count_unique_threads()
     std::unique_lock<std::mutex> total_lock(total_mutex);
     BS::concurrency_t total_count = 0;
     bool ID_release = false;
-    pool.wait_for_tasks();
+    pool.wait_for_tasks_done();
     for (std::thread::id& id : thread_IDs)
         pool.push_task(
             [&total_count, &id, &ID_release]
@@ -200,7 +200,7 @@ BS::concurrency_t count_unique_threads()
     }
     ID_cv.notify_all();
     total_cv.wait(total_lock, [&total_count, &num_tasks] { return total_count == num_tasks; });
-    pool.wait_for_tasks();
+    pool.wait_for_tasks_done();
     std::sort(thread_IDs.begin(), thread_IDs.end());
     return static_cast<BS::concurrency_t>(std::unique(thread_IDs.begin(), thread_IDs.end()) - thread_IDs.begin());
 }
@@ -210,9 +210,9 @@ BS::concurrency_t count_unique_threads()
  */
 void check_constructor()
 {
-    dual_println("Checking that the thread pool reports a number of threads equal to the hardware concurrency...");
+    dual_println("Checking that the thread pool reports a number of threads_ptr equal to the hardware concurrency...");
     check(std::thread::hardware_concurrency(), pool.get_thread_count());
-    dual_println("Checking that the manually counted number of unique thread IDs is equal to the reported number of threads...");
+    dual_println("Checking that the manually counted number of unique thread IDs is equal to the reported number of threads_ptr...");
     check(pool.get_thread_count(), count_unique_threads());
 }
 
@@ -222,19 +222,19 @@ void check_constructor()
 void check_reset()
 {
     pool.reset(std::thread::hardware_concurrency() / 2);
-    dual_println("Checking that after reset() the thread pool reports a number of threads equal to half the hardware concurrency...");
+    dual_println("Checking that after reset() the thread pool reports a number of threads_ptr equal to half the hardware concurrency...");
     check(std::thread::hardware_concurrency() / 2, pool.get_thread_count());
-    dual_println("Checking that after reset() the manually counted number of unique thread IDs is equal to the reported number of threads...");
+    dual_println("Checking that after reset() the manually counted number of unique thread IDs is equal to the reported number of threads_ptr...");
     check(pool.get_thread_count(), count_unique_threads());
     pool.reset(std::thread::hardware_concurrency());
-    dual_println("Checking that after a second reset() the thread pool reports a number of threads equal to the hardware concurrency...");
+    dual_println("Checking that after a second reset() the thread pool reports a number of threads_ptr equal to the hardware concurrency...");
     check(std::thread::hardware_concurrency(), pool.get_thread_count());
-    dual_println("Checking that after a second reset() the manually counted number of unique thread IDs is equal to the reported number of threads...");
+    dual_println("Checking that after a second reset() the manually counted number of unique thread IDs is equal to the reported number of threads_ptr...");
     check(pool.get_thread_count(), count_unique_threads());
 }
 
 // =======================================
-// Functions to verify submission of tasks
+// Functions to verify submission of tasks_to_be_executed
 // =======================================
 
 /**
@@ -246,14 +246,14 @@ void check_push_task()
     {
         bool flag = false;
         pool.push_task([&flag] { flag = true; });
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(flag);
     }
     dual_println("Checking that push_task() works for a function with one argument and no return value...");
     {
         bool flag = false;
         pool.push_task([](bool* flag_) { *flag_ = true; }, &flag);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(flag);
     }
     dual_println("Checking that push_task() works for a function with two arguments and no return value...");
@@ -261,7 +261,7 @@ void check_push_task()
         bool flag1 = false;
         bool flag2 = false;
         pool.push_task([](bool* flag1_, bool* flag2_) { *flag1_ = *flag2_ = true; }, &flag1, &flag2);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(flag1 && flag2);
     }
 }
@@ -361,14 +361,14 @@ public:
     void push_test_flag_no_args()
     {
         pool.push_task(&flag_class::set_flag_no_args, this);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(get_flag());
     }
 
     void push_test_flag_one_arg()
     {
         pool.push_task(&flag_class::set_flag_one_arg, this, true);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(get_flag());
     }
 
@@ -409,14 +409,14 @@ void check_member_function()
     {
         flag_class flag;
         pool.push_task(&flag_class::set_flag_no_args, &flag);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(flag.get_flag());
     }
     dual_println("Checking that push_task() works for a member function with one argument and no return value...");
     {
         flag_class flag;
         pool.push_task(&flag_class::set_flag_one_arg, &flag, true);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         check(flag.get_flag());
     }
     dual_println("Checking that submit() works for a member function with no arguments or return value...");
@@ -483,7 +483,7 @@ void check_member_function_within_object()
 }
 
 /**
- * @brief Check that wait_for_tasks() works.
+ * @brief Check that wait_for_tasks_done() works.
  */
 void check_wait_for_tasks()
 {
@@ -496,8 +496,8 @@ void check_wait_for_tasks()
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 flags[i] = true;
             });
-    dual_println("Waiting for tasks...");
-    pool.wait_for_tasks();
+    dual_println("Waiting for tasks_to_be_executed...");
+    pool.wait_for_tasks_done();
     bool all_flags = true;
     for (BS::concurrency_t i = 0; i < n; ++i)
         all_flags = all_flags && flags[i];
@@ -509,11 +509,11 @@ void check_wait_for_tasks()
 // ========================================
 
 /**
- * @brief Check that push_loop() or parallelize_loop() work for a specific range of indices split over a specific number of tasks, with no return value.
+ * @brief Check that push_loop() or parallelize_loop() work for a specific range of indices split over a specific number of tasks_to_be_executed, with no return value.
  *
  * @param random_start The first index in the loop.
  * @param random_end The last index in the loop plus 1.
- * @param num_tasks The number of tasks.
+ * @param num_tasks The number of tasks_to_be_executed.
  * @param use_push Whether to check push_loop() instead of parallelize_loop().
  */
 template <typename T>
@@ -521,7 +521,7 @@ void check_parallelize_loop_no_return(const int64_t random_start, T random_end, 
 {
     if (random_start == random_end)
         ++random_end;
-    dual_println("Verifying that ", use_push ? "push_loop()" : "parallelize_loop()", " from ", random_start, " to ", random_end, " with ", num_tasks, num_tasks == 1 ? " task" : " tasks", " modifies all indices...");
+    dual_println("Verifying that ", use_push ? "push_loop()" : "parallelize_loop()", " from ", random_start, " to ", random_end, " with ", num_tasks, num_tasks == 1 ? " task" : " tasks_to_be_executed", " modifies all indices...");
     const size_t num_indices = static_cast<size_t>(std::abs(random_end - random_start));
     const int64_t offset = std::min(random_start, static_cast<int64_t>(random_end));
     std::unique_ptr<std::atomic<bool>[]> flags = std::make_unique<std::atomic<bool>[]>(num_indices);
@@ -536,7 +536,7 @@ void check_parallelize_loop_no_return(const int64_t random_start, T random_end, 
             pool.push_loop(random_end, loop, num_tasks);
         else
             pool.push_loop(random_start, random_end, loop, num_tasks);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
     }
     else
     {
@@ -552,17 +552,17 @@ void check_parallelize_loop_no_return(const int64_t random_start, T random_end, 
 }
 
 /**
- * @brief Check that parallelize_loop() works for a specific range of indices split over a specific number of tasks, with a return value.
+ * @brief Check that parallelize_loop() works for a specific range of indices split over a specific number of tasks_to_be_executed, with a return value.
  *
  * @param random_start The first index in the loop.
  * @param random_end The last index in the loop plus 1.
- * @param num_tasks The number of tasks.
+ * @param num_tasks The number of tasks_to_be_executed.
  */
 void check_parallelize_loop_return(const int64_t random_start, int64_t random_end, const BS::concurrency_t num_tasks)
 {
     if (random_start == random_end)
         ++random_end;
-    dual_println("Verifying that parallelize_loop() from ", random_start, " to ", random_end, " with ", num_tasks, num_tasks == 1 ? " task" : " tasks", " correctly sums all indices...");
+    dual_println("Verifying that parallelize_loop() from ", random_start, " to ", random_end, " with ", num_tasks, num_tasks == 1 ? " task" : " tasks_to_be_executed", " correctly sums all indices...");
     const auto loop = [](const int64_t start, const int64_t end)
     {
         int64_t total = 0;
@@ -578,7 +578,7 @@ void check_parallelize_loop_return(const int64_t random_start, int64_t random_en
 }
 
 /**
- * @brief Check that push_loop() and parallelize_loop() work using several different random values for the range of indices and number of tasks.
+ * @brief Check that push_loop() and parallelize_loop() work using several different random values for the range of indices and number of tasks_to_be_executed.
  */
 void check_parallelize_loop()
 {
@@ -617,9 +617,9 @@ void check_parallelize_loop()
 void check_task_monitoring()
 {
     BS::concurrency_t n = std::min<BS::concurrency_t>(std::thread::hardware_concurrency(), 4);
-    dual_println("Resetting pool to ", n, " threads.");
+    dual_println("Resetting pool to ", n, " threads_ptr.");
     pool.reset(n);
-    dual_println("Submitting ", n * 3, " tasks.");
+    dual_println("Submitting ", n * 3, " tasks_to_be_executed.");
     std::unique_ptr<std::atomic<bool>[]> release = std::make_unique<std::atomic<bool>[]>(n * 3);
     for (BS::concurrency_t i = 0; i < n * 3; ++i)
         pool.push_task(
@@ -632,32 +632,36 @@ void check_task_monitoring()
     constexpr std::chrono::milliseconds sleep_time(300);
     std::this_thread::sleep_for(sleep_time);
 
-    dual_println("After submission, should have: ", n * 3, " tasks total, ", n, " tasks running, ", n * 2, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n * 3 && pool.get_tasks_running() == n && pool.get_tasks_queued() == n * 2);
+    dual_println("After submission, should have: ", n * 3, " tasks_to_be_executed total, ", n, " tasks_to_be_executed is_running, ", n * 2, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n * 3 && pool.get_tasks_running() == n && pool.get_tasks_queued_size() == n * 2);
     for (BS::concurrency_t i = 0; i < n; ++i)
         release[i] = true;
     std::this_thread::sleep_for(sleep_time);
 
-    dual_println("After releasing ", n, " tasks, should have: ", n * 2, " tasks total, ", n, " tasks running, ", n, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n * 2 && pool.get_tasks_running() == n && pool.get_tasks_queued() == n);
+    dual_println("After releasing ", n, " tasks_to_be_executed, should have: ", n * 2, " tasks_to_be_executed total, ", n, " tasks_to_be_executed is_running, ", n, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n * 2 && pool.get_tasks_running() == n && pool.get_tasks_queued_size() == n);
     for (BS::concurrency_t i = n; i < n * 2; ++i)
         release[i] = true;
     std::this_thread::sleep_for(sleep_time);
 
-    dual_println("After releasing ", n, " more tasks, should have: ", n, " tasks total, ", n, " tasks running, ", 0, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n && pool.get_tasks_running() == n && pool.get_tasks_queued() == 0);
+    dual_println("After releasing ", n, " more tasks_to_be_executed, should have: ", n, " tasks_to_be_executed total, ", n, " tasks_to_be_executed is_running, ", 0, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n && pool.get_tasks_running() == n && pool.get_tasks_queued_size() == 0);
     for (BS::concurrency_t i = n * 2; i < n * 3; ++i)
         release[i] = true;
     std::this_thread::sleep_for(sleep_time);
 
-    dual_println("After releasing the final ", n, " tasks, should have: ", 0, " tasks total, ", 0, " tasks running, ", 0, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == 0 && pool.get_tasks_running() == 0 && pool.get_tasks_queued() == 0);
+    dual_println("After releasing the final ", n, " tasks_to_be_executed, should have: ", 0, " tasks_to_be_executed total, ", 0, " tasks_to_be_executed is_running, ", 0, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == 0 && pool.get_tasks_running() == 0 && pool.get_tasks_queued_size() == 0);
 
-    dual_println("Resetting pool to ", std::thread::hardware_concurrency(), " threads.");
+    dual_println("Resetting pool to ", std::thread::hardware_concurrency(), " threads_ptr.");
     pool.reset(std::thread::hardware_concurrency());
 }
 
@@ -667,7 +671,7 @@ void check_task_monitoring()
 void check_pausing()
 {
     BS::concurrency_t n = std::min<BS::concurrency_t>(std::thread::hardware_concurrency(), 4);
-    dual_println("Resetting pool to ", n, " threads.");
+    dual_println("Resetting pool to ", n, " threads_ptr.");
     pool.reset(n);
     dual_println("Checking that the pool correctly reports that it is not paused.");
     check(pool.is_paused() == false);
@@ -675,7 +679,7 @@ void check_pausing()
     pool.pause();
     dual_println("Checking that the pool correctly reports that it is paused.");
     check(pool.is_paused() == true);
-    dual_println("Submitting ", n * 3, " tasks, each one waiting for 200ms.");
+    dual_println("Submitting ", n * 3, " tasks_to_be_executed, each one waiting for 200ms.");
     for (BS::concurrency_t i = 0; i < n * 3; ++i)
         pool.push_task(
             [i]
@@ -684,44 +688,50 @@ void check_pausing()
                 dual_println("Task ", i, " done.");
             });
 
-    dual_println("Immediately after submission, should have: ", n * 3, " tasks total, ", 0, " tasks running, ", n * 3, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n * 3 && pool.get_tasks_running() == 0 && pool.get_tasks_queued() == n * 3);
+    dual_println("Immediately after submission, should have: ", n * 3, " tasks_to_be_executed total, ", 0, " tasks_to_be_executed is_running, ", n * 3, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n * 3 && pool.get_tasks_running() == 0 && pool.get_tasks_queued_size() == n * 3);
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-    dual_println("300ms later, should still have: ", n * 3, " tasks total, ", 0, " tasks running, ", n * 3, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n * 3 && pool.get_tasks_running() == 0 && pool.get_tasks_queued() == n * 3);
+    dual_println("300ms later, should still have: ", n * 3, " tasks_to_be_executed total, ", 0, " tasks_to_be_executed is_running, ", n * 3, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n * 3 && pool.get_tasks_running() == 0 && pool.get_tasks_queued_size() == n * 3);
     dual_println("Unpausing pool.");
     pool.unpause();
     dual_println("Checking that the pool correctly reports that it is not paused.");
     check(pool.is_paused() == false);
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-    dual_println("300ms later, should have: ", n * 2, " tasks total, ", n, " tasks running, ", n, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n * 2 && pool.get_tasks_running() == n && pool.get_tasks_queued() == n);
-    dual_println("Pausing pool and using wait_for_tasks() to wait for the running tasks.");
+    dual_println("300ms later, should have: ", n * 2, " tasks_to_be_executed total, ", n, " tasks_to_be_executed is_running, ", n, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n * 2 && pool.get_tasks_running() == n && pool.get_tasks_queued_size() == n);
+    dual_println("Pausing pool and using wait_for_tasks_done() to wait for the is_running tasks_to_be_executed.");
     pool.pause();
-    pool.wait_for_tasks();
+    pool.wait_for_tasks_done();
 
-    dual_println("After waiting, should have: ", n, " tasks total, ", 0, " tasks running, ", n, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n && pool.get_tasks_running() == 0 && pool.get_tasks_queued() == n);
+    dual_println("After waiting, should have: ", n, " tasks_to_be_executed total, ", 0, " tasks_to_be_executed is_running, ", n, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n && pool.get_tasks_running() == 0 && pool.get_tasks_queued_size() == n);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    dual_println("200ms later, should still have: ", n, " tasks total, ", 0, " tasks running, ", n, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == n && pool.get_tasks_running() == 0 && pool.get_tasks_queued() == n);
-    dual_println("Unpausing pool and using wait_for_tasks() to wait for all tasks.");
+    dual_println("200ms later, should still have: ", n, " tasks_to_be_executed total, ", 0, " tasks_to_be_executed is_running, ", n, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == n && pool.get_tasks_running() == 0 && pool.get_tasks_queued_size() == n);
+    dual_println("Unpausing pool and using wait_for_tasks_done() to wait for all tasks_to_be_executed.");
     pool.unpause();
-    pool.wait_for_tasks();
+    pool.wait_for_tasks_done();
 
-    dual_println("After waiting, should have: ", 0, " tasks total, ", 0, " tasks running, ", 0, " tasks queued...");
-    dual_print("Result: ", pool.get_tasks_total(), " tasks total, ", pool.get_tasks_running(), " tasks running, ", pool.get_tasks_queued(), " tasks queued ");
-    check(pool.get_tasks_total() == 0 && pool.get_tasks_running() == 0 && pool.get_tasks_queued() == 0);
+    dual_println("After waiting, should have: ", 0, " tasks_to_be_executed total, ", 0, " tasks_to_be_executed is_running, ", 0, " tasks_to_be_executed queued...");
+    dual_print("Result: ", pool.get_tasks_total(), " tasks_to_be_executed total, ", pool.get_tasks_running(), " tasks_to_be_executed is_running, ",
+               pool.get_tasks_queued_size(), " tasks_to_be_executed queued ");
+    check(pool.get_tasks_total() == 0 && pool.get_tasks_running() == 0 && pool.get_tasks_queued_size() == 0);
 
-    dual_println("Resetting pool to ", std::thread::hardware_concurrency(), " threads.");
+    dual_println("Resetting pool to ", std::thread::hardware_concurrency(), " threads_ptr.");
     pool.reset(std::thread::hardware_concurrency());
 }
 
@@ -788,7 +798,7 @@ void check_vector_of_size(const size_t vector_size, const BS::concurrency_t num_
         vector_1[i] = vector_dist(mt);
         vector_2[i] = vector_dist(mt);
     }
-    dual_println("Adding two vectors with ", vector_size, " elements using ", num_tasks, " tasks...");
+    dual_println("Adding two vectors with ", vector_size, " elements using ", num_tasks, " tasks_to_be_executed...");
     std::vector<int64_t> sum_single(vector_size);
     for (size_t i = 0; i < vector_size; ++i)
         sum_single[i] = vector_1[i] + vector_2[i];
@@ -848,7 +858,7 @@ void do_tests()
     print_header("Checking that submitting member functions from within an object works:");
     check_member_function_within_object();
 
-    print_header("Checking that wait_for_tasks() works...");
+    print_header("Checking that wait_for_tasks_done() works...");
     check_wait_for_tasks();
 
     print_header("Checking that push_loop() and parallelize_loop() work:");
@@ -874,7 +884,7 @@ void do_tests()
 /**
  * @brief Print the timing of a specific test.
  *
- * @param num_tasks The number of tasks.
+ * @param num_tasks The number of tasks_to_be_executed.
  * @param mean_sd An std::pair containing the mean as the first member and standard deviation as the second member.
  */
 void print_timing(const BS::concurrency_t num_tasks, const std::pair<double, double>& mean_sd)
@@ -884,21 +894,21 @@ void print_timing(const BS::concurrency_t num_tasks, const std::pair<double, dou
     else if (num_tasks == 1)
         dual_print("With    1  task");
     else
-        dual_print("With ", std::setw(4), num_tasks, " tasks");
+        dual_print("With ", std::setw(4), num_tasks, " tasks_to_be_executed");
     dual_println(", mean execution time was ", std::setw(6), mean_sd.first, " ms with standard deviation ", std::setw(4), mean_sd.second, " ms.");
 }
 
 /**
  * @brief Calculate and print the speedup obtained by multithreading.
  *
- * @param timings A vector of the timings corresponding to different numbers of tasks.
+ * @param timings A vector of the timings corresponding to different numbers of tasks_to_be_executed.
  */
 void print_speedup(const std::vector<double>& timings, const BS::concurrency_t try_tasks[])
 {
     const std::vector<double>::const_iterator min_el = std::min_element(std::begin(timings), std::end(timings));
     const double max_speedup = std::round(timings[0] / *min_el * 10) / 10;
     const BS::concurrency_t num_tasks = try_tasks[min_el - std::begin(timings)];
-    dual_println("Maximum speedup obtained by multithreading vs. single-threading: ", max_speedup, "x, using ", num_tasks, " tasks.");
+    dual_println("Maximum speedup obtained by multithreading vs. single-threading: ", max_speedup, "x, using ", num_tasks, " tasks_to_be_executed.");
 }
 
 /**
@@ -945,22 +955,22 @@ void check_performance()
     // Initialize a timer object to measure execution time.
     BS::timer tmr;
 
-    // Store the number of available hardware threads for easy access.
+    // Store the number of available hardware threads_ptr for easy access.
     const BS::concurrency_t thread_count = pool.get_thread_count();
-    dual_println("Using ", thread_count, " threads.");
+    dual_println("Using ", thread_count, " threads_ptr.");
 
-    // Define the number of tasks to try in each run of the test (0 = single-threaded).
+    // Define the number of tasks_to_be_executed to try in each run of the test (0 = single-threaded).
     const BS::concurrency_t try_tasks[] = {0, thread_count / 4, thread_count / 2, thread_count, thread_count * 2, thread_count * 4};
 
     // How many times to repeat each run of the test in order to collect reliable statistics.
     constexpr size_t repeat = 20;
     dual_println("Each test will be repeated ", repeat, " times to collect reliable statistics.");
 
-    // The target execution time, in milliseconds, of the multi-threaded test with the number of blocks equal to the number of threads. The total time spent on that test will be approximately equal to repeat * target_ms.
+    // The target execution time, in milliseconds, of the multi-threaded test with the number of blocks equal to the number of threads_ptr. The total time spent on that test will be approximately equal to repeat * target_ms.
     constexpr std::chrono::milliseconds::rep target_ms = 50;
 
     // Test how many vectors we need to generate, and of what size, to roughly achieve the target execution time.
-    dual_println("Determining the number and size of vectors to generate in order to achieve an approximate mean execution time of ", target_ms, " ms with ", thread_count, " tasks...");
+    dual_println("Determining the number and size of vectors to generate in order to achieve an approximate mean execution time of ", target_ms, " ms with ", thread_count, " tasks_to_be_executed...");
     size_t num_vectors = 64;
     size_t vector_size = 64;
     std::vector<std::vector<double>> vectors;
@@ -979,7 +989,7 @@ void check_performance()
         vectors = std::vector<std::vector<double>>(num_vectors, std::vector<double>(vector_size));
         tmr.start();
         pool.push_loop(num_vectors, loop);
-        pool.wait_for_tasks();
+        pool.wait_for_tasks_done();
         tmr.stop();
     } while (tmr.ms() < target_ms);
     num_vectors = thread_count * static_cast<size_t>(std::llround(static_cast<double>(num_vectors) * static_cast<double>(target_ms) / static_cast<double>(tmr.ms()) / thread_count));
@@ -1001,7 +1011,7 @@ void check_performance()
             if (n > 1)
             {
                 pool.push_loop(num_vectors, loop, n);
-                pool.wait_for_tasks();
+                pool.wait_for_tasks_done();
             }
             else
             {

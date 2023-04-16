@@ -130,11 +130,11 @@ void check(const T1 expected, const T2 obtained)
 }
 
 // =========================================
-// Functions to verify the number of threads
+// Functions to verify the number of threads_ptr
 // =========================================
 
 /**
- * @brief Count the number of unique threads in the pool. Submits a number of tasks equal to twice the thread count into the pool. Each task stores the ID of the thread running it, and then waits until released by the main thread. This ensures that each thread in the pool runs at least one task. The number of unique thread IDs is then counted from the stored IDs.
+ * @brief Count the number of unique threads_ptr in the pool. Submits a number of tasks_to_be_executed equal to twice the thread count into the pool. Each task stores the ID of the thread is_running it, and then waits until released by the main thread. This ensures that each thread in the pool runs at least one task. The number of unique thread IDs is then counted from the stored IDs.
  */
 std::condition_variable ID_cv, total_cv;
 std::mutex ID_mutex, total_mutex;
@@ -176,14 +176,14 @@ BS::concurrency_t count_unique_threads()
  */
 void check_constructor()
 {
-    println("Checking that the thread pool reports a number of threads equal to the hardware concurrency...");
+    println("Checking that the thread pool reports a number of threads_ptr equal to the hardware concurrency...");
     check(std::thread::hardware_concurrency(), pool.get_thread_count());
-    println("Checking that the manually counted number of unique thread IDs is equal to the reported number of threads...");
+    println("Checking that the manually counted number of unique thread IDs is equal to the reported number of threads_ptr...");
     check(pool.get_thread_count(), count_unique_threads());
 }
 
 // =======================================
-// Functions to verify submission of tasks
+// Functions to verify submission of tasks_to_be_executed
 // =======================================
 
 /**
@@ -432,7 +432,7 @@ void check_member_function_within_object()
 }
 
 /**
- * @brief Check that wait_for_tasks() works.
+ * @brief Check that wait_for_tasks_done() works.
  */
 void check_wait_for_tasks()
 {
@@ -445,7 +445,7 @@ void check_wait_for_tasks()
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 flags[i] = true;
             });
-    println("Waiting for tasks...");
+    println("Waiting for tasks_to_be_executed...");
     pool.wait_for_tasks();
     bool all_flags = true;
     for (BS::concurrency_t i = 0; i < n; ++i)
@@ -458,18 +458,18 @@ void check_wait_for_tasks()
 // ========================================
 
 /**
- * @brief Check that push_loop() works for a specific range of indices split over a specific number of tasks, with no return value.
+ * @brief Check that push_loop() works for a specific range of indices split over a specific number of tasks_to_be_executed, with no return value.
  *
  * @param random_start The first index in the loop.
  * @param random_end The last index in the loop plus 1.
- * @param num_tasks The number of tasks.
+ * @param num_tasks The number of tasks_to_be_executed.
  */
 template <typename T>
 void check_push_loop_no_return(const int64_t random_start, T random_end, const BS::concurrency_t num_tasks)
 {
     if (random_start == random_end)
         ++random_end;
-    println("Verifying that push_loop() from ", random_start, " to ", random_end, " with ", num_tasks, num_tasks == 1 ? " task" : " tasks", " modifies all indices...");
+    println("Verifying that push_loop() from ", random_start, " to ", random_end, " with ", num_tasks, num_tasks == 1 ? " task" : " tasks_to_be_executed", " modifies all indices...");
     const size_t num_indices = static_cast<size_t>(std::abs(random_end - random_start));
     const int64_t offset = std::min(random_start, static_cast<int64_t>(random_end));
     std::unique_ptr<std::atomic<bool>[]> flags = std::make_unique<std::atomic<bool>[]>(num_indices);
@@ -490,7 +490,7 @@ void check_push_loop_no_return(const int64_t random_start, T random_end, const B
 }
 
 /**
- * @brief Check that push_loop() works using several different random values for the range of indices and number of tasks.
+ * @brief Check that push_loop() works using several different random values for the range of indices and number of tasks_to_be_executed.
  */
 void check_parallelize_loop()
 {
@@ -561,7 +561,7 @@ void check_vector_of_size(const size_t vector_size, const BS::concurrency_t num_
         vector_1[i] = vector_dist(mt);
         vector_2[i] = vector_dist(mt);
     }
-    println("Adding two vectors with ", vector_size, " elements using ", num_tasks, " tasks...");
+    println("Adding two vectors with ", vector_size, " elements using ", num_tasks, " tasks_to_be_executed...");
     std::vector<int64_t> sum_single(vector_size);
     for (size_t i = 0; i < vector_size; ++i)
         sum_single[i] = vector_1[i] + vector_2[i];
@@ -617,7 +617,7 @@ void do_tests()
     print_header("Checking that submitting member functions from within an object works:");
     check_member_function_within_object();
 
-    print_header("Checking that wait_for_tasks() works...");
+    print_header("Checking that wait_for_tasks_done() works...");
     check_wait_for_tasks();
 
     print_header("Checking that push_loop() works:");
