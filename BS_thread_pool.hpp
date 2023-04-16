@@ -144,18 +144,18 @@ public:
      *
      * @param first_index_ The first index in the range.
      * @param index_after_last_ The index after the last index in the range.
-     * @param num_blocks_ The desired number of blocks to divide the range into.
+     * @param desired_num_blocks_ The desired number of blocks to divide the range into.
      */
-    blocks(const T1 first_index_, const T2 index_after_last_, const size_t num_blocks_) : first_index(static_cast<T>(first_index_)), index_after_last(static_cast<T>(index_after_last_)), num_blocks(num_blocks_)
+    blocks(const T1 first_index_, const T2 index_after_last_, const size_t desired_num_blocks_) : first_index(static_cast<T>(first_index_)), index_after_last(static_cast<T>(index_after_last_)), blocks_num(desired_num_blocks_)
     {
         if (index_after_last < first_index)
             std::swap(index_after_last, first_index);
-        total_size = static_cast<size_t>(index_after_last - first_index);
-        block_size = static_cast<size_t>(total_size / num_blocks);
-        if (block_size == 0)
+        indices_total_size = static_cast<size_t>(index_after_last - first_index);
+        per_block_size = static_cast<size_t>(indices_total_size / blocks_num);
+        if (per_block_size == 0)
         {
-            block_size = 1;
-            num_blocks = (total_size > 1) ? total_size : 1;
+            per_block_size = 1;
+            blocks_num = (indices_total_size > 1) ? indices_total_size : 1;
         }
     }
 
@@ -167,7 +167,7 @@ public:
      */
     [[nodiscard]] T start(const size_t i) const
     {
-        return static_cast<T>(i * block_size) + first_index;
+        return static_cast<T>(i * per_block_size) + first_index;
     }
 
     /**
@@ -178,7 +178,7 @@ public:
      */
     [[nodiscard]] T end(const size_t i) const
     {
-        return (i == num_blocks - 1) ? index_after_last : (static_cast<T>((i + 1) * block_size) + first_index);
+        return (i == blocks_num - 1) ? index_after_last : (static_cast<T>((i + 1) * per_block_size) + first_index);
     }
 
     /**
@@ -188,7 +188,7 @@ public:
      */
     [[nodiscard]] size_t get_num_blocks() const
     {
-        return num_blocks;
+        return blocks_num;
     }
 
     /**
@@ -198,14 +198,14 @@ public:
      */
     [[nodiscard]] size_t get_total_size() const
     {
-        return total_size;
+        return indices_total_size;
     }
 
 private:
     /**
      * @brief The size of each block (except possibly the last block).
      */
-    size_t block_size = 0;
+    size_t per_block_size = 0;
 
     /**
      * @brief The first index in the range.
@@ -220,12 +220,12 @@ private:
     /**
      * @brief The number of blocks.
      */
-    size_t num_blocks = 0;
+    size_t blocks_num = 0;
 
     /**
      * @brief The total number of indices in the range.
      */
-    size_t total_size = 0;
+    size_t indices_total_size = 0;
 };
 
 //                                        End class blocks                                       //
